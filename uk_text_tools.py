@@ -12,10 +12,15 @@ def Word2(s):
     except AttributeError:
         return ''
 
-def Payload(l, after  = ' '):
+def Payload(l, after  = ' ', before = ''):
     offset = len(after)
     pos = l.find(after)
-    return l[pos + offset:].strip() if pos != -1 else ''
+    pos_l = -1
+    if before:
+        pos_l = l.find(before)
+    if pos_l == -1: 
+        pos_l = len(l)
+    return l[pos + offset:pos_l].strip() if pos != -1 else ''
 
 def Word3(s):
     "Actually, returns everything after the second word"
@@ -59,21 +64,21 @@ class ReD(object):
             raise Exception("Possibly iterative definition in %s" % self.defs) 
         return text
     def __repr__(self):
-        res = ''
-        for k in self.defs:
-            res += "%s:%s " % (k[:3], self.defs[k][:3])
-        return res
+        return repr(self.defs)
 
 def splitter(keywords_list):
     return compile('(%s)'%'|'.join(keywords_list), 
         MULTILINE)
-    
 def Erase(s, *l):
     for i in l:
         r = compile(i, M)
         s = r.sub('', s)
     return s
-    
+def myhex(x, n):
+    s = (hex(x)[2:]).replace("L", "")
+    return '0x%s' % s.zfill(n)
+ 
+ 
 if __name__ == "__main__":    
     text = '''
     a
