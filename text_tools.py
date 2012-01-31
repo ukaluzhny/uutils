@@ -97,14 +97,14 @@ class ReD(object):
             v = '|'.join(self.defs.keys())
             v = r'\b({})\b'.format(v)
             self.re_defs = compile(v, U|self.flags)
-        for i in range(100):
-            if self.defs:
+        if self.defs:
+            for i in range(100):
                 t = self.re_defs.sub(lambda m: self.defs[m.group(0)], text)
-            if t == text:
-                break
-            text = t
-        if i == 99:
-            raise Exception("Possibly iterative definition in {}".format(self.defs)) 
+                if t == text:
+                    break
+                text = t
+            if i >= 99:
+                raise Exception("Possibly iterative definition in {}".format(self.defs)) 
         return text
     def __repr__(self):
         return repr(self.defs)
