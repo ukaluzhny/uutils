@@ -17,11 +17,10 @@ True
 True
 >>> Erase(s, '\d\d', ' ') == '0onefour58'
 True
->>> myhex(576, 5)
-'0x00240'
->>> myhex(576, 5, True)
-'00240'
-
+>>> myhex(576, 5) == '0x00240'
+True
+>>> myhex(576, 5, True) == '00240'
+True
 >>> text_h = 'כלומר, אין שום משמעות מיוחדת לביטוי "אין זו כריתות"'
 >>> Word1(text_h) == 'כלומר'
 True
@@ -47,7 +46,7 @@ True
 from __future__ import division, print_function, unicode_literals
 from re import *
 import warnings
-r_word = compile(r'\b\w+\b', U)
+r_word = compile(r'\w+', U)
 
 def Word1(s):
     try:
@@ -97,25 +96,25 @@ class ReD(object):
             v = '|'.join(self.defs.keys())
             v = r'\b({})\b'.format(v)
             self.re_defs = compile(v, U|self.flags)
-        for i in range(100):
-            if self.defs:
+        if self.defs:
+            for i in range(100):
                 t = self.re_defs.sub(lambda m: self.defs[m.group(0)], text)
-            if t == text:
-                break
-            text = t
-        if i == 99:
-            raise Exception("Possibly iterative definition in {}".format(self.defs)) 
+                if t == text:
+                    break
+                text = t
+            if i >= 99:
+                raise Exception("Possibly iterative definition in {}".format(self.defs)) 
         return text
     def __repr__(self):
         return repr(self.defs)
 
 def splitted(s, keywords_list, flags = 0):
-    r = compile('({})'.format('|'.join(keywords_list), M|flags))
+    r = compile('({})'.format('|'.join(keywords_list), flags))
     return r.split(s)
     
 def Erase(s, *l):
     for i in l:
-        r = compile(i, M|U)
+        r = compile(i)
         s = r.sub('', s)
     return s
 def myhex(x, n, bare = False):
