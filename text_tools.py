@@ -47,6 +47,7 @@ from __future__ import division, print_function, unicode_literals
 from re import *
 import warnings
 r_word = compile(r'\w+', U)
+heb_colon = u"\u05c3"
 
 def Word1(s):
     try:
@@ -122,10 +123,7 @@ def myhex(x, n, bare = False):
     form = '{}' if bare else '0x{}'
     return form.format(s.zfill(n))
 
-heb_colon = u"\u05c3"
-
-
-
+    
 if __name__ == "__main__":
    import doctest
    doctest.testmod()
