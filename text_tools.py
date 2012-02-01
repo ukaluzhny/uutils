@@ -96,7 +96,7 @@ class ReD(object):
         if not self.re_defs and self.defs:
             v = '|'.join(self.defs.keys())
             v = r'\b({})\b'.format(v)
-            self.re_defs = compile(v, U|self.flags)
+            self.re_defs = compile(v, self.flags)
         if self.defs:
             for i in range(100):
                 t = self.re_defs.sub(lambda m: self.defs[m.group(0)], text)
@@ -110,7 +110,7 @@ class ReD(object):
         return repr(self.defs)
 
 def splitted(s, keywords_list, flags = 0):
-    r = compile('({})'.format('|'.join(keywords_list), flags))
+    r = compile('({})'.format('|'.join(keywords_list)), M|flags)
     return r.split(s)
     
 def Erase(s, *l):
@@ -122,10 +122,11 @@ def myhex(x, n, bare = False):
     s = (hex(x)[2:]).replace("L", "")
     form = '{}' if bare else '0x{}'
     return form.format(s.zfill(n))
-
-    
+def reverse_word_order(w):
+   return ' '.join(reversed(w.split()))
+  
 if __name__ == "__main__":
    import doctest
    doctest.testmod()
-   input("Press 'Enter'...")
+   raw_input("Press 'Enter'...")
  

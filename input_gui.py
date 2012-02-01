@@ -1,6 +1,8 @@
 ﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+from __future__ import division, print_function, unicode_literals
 from Tkinter import *
-import winsound
+from math import sqrt
 class OptionButton(Button):
     def __init__(self, data,
             row, table):
@@ -14,16 +16,12 @@ class OptionButton(Button):
         Button(row, text = text2show, command = f).pack(
             side = row.direction, padx = 1, pady  = 1)
 class ExitButton(Button):
-    def __init__(self, master, root,
+    def __init__(self, master, root = None,
             text2show = 'quit'):
+        if not root:
+            root = master
         Button(master, text = text2show,
                 command = root.destroy).pack(side = 'bottom', fill = 'x')
-class SoundButton(Button):
-    def __init__(self, fname, master, text2show = 'sound'):
-        def f(name = fname):
-            winsound.PlaySound(name, winsound.SND_FILENAME)
-        Button(master, text = text2show,
-            command = f).pack(side = master.direction)
 
 class RowOfButtons(Frame):
     def __init__(self, buttons, master):
@@ -41,7 +39,7 @@ class TableOfButtonOptions(Frame):
         self.direction = direction
         for row in rows:
             RowOfButtons(row, self)
-        ExitButton(self, root)
+        #ExitButton(self, root)
         self.pack()
 
 class Result(object):
@@ -52,10 +50,10 @@ class Result(object):
         self.val = x
         self.root.destroy()
 
-def get_option(table):
+def get_option(table, direction = 'left'):
     root = Tk()
     res = Result(root)
-    gui = TableOfButtonOptions(table, res, root)
+    gui = TableOfButtonOptions(table, res, root, direction)
     gui.mainloop()
     return res.val
 
@@ -81,6 +79,29 @@ def StrInput():
     app.mainloop()
     return res
 
-def rw(w):
-   return ' '.join(reversed(w.split()))
-       
+def print_gui(*l):
+    root = Tk()
+    for i in l:
+        Label(root, text = unicode(i)).pack()
+    ExitButton(root)
+    root.mainloop()
+
+def rows(buttons, n = 2):
+    if n == 1:
+        f = lambda x: 1 + len(x)
+    else:
+        f = lambda x: 1 + len(x[0])
+    l = sum(map(f, buttons))
+    w = sqrt(4*l)
+    res = []
+    row, l = [], 0
+    for b in buttons:
+        if l < w:
+            row.append(b)
+            l += f(b)
+        else: 
+            res.append(row)
+            row, l = [b], f(b)
+    if row:
+        res.append(row)
+    return res        
