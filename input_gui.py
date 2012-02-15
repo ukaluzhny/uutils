@@ -50,10 +50,12 @@ class Result(object):
         self.val = x
         self.root.destroy()
 
-def get_option(table, direction = 'left'):
+def get_option(table, header = "Please choose one:", direction = 'left'):
     root = Tk()
+    if header:
+        Label(root, text = header).pack()
     res = Result(root)
-    gui = TableOfButtonOptions(table, res, root, direction)
+    gui = TableOfButtonOptions([table], res, root, direction)
     gui.mainloop()
     return res.val
 
