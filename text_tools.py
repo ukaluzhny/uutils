@@ -75,6 +75,12 @@ def Word3(s):
     s = s[pos:].strip()
     return Payload(s)
 
+def WordL(s): 
+	last_word = compile(r'\w+$', U)
+    try:
+        return last_word.search(s).group()
+    except AttributeError:
+        return ''
 
 class ReD(object):
     def __init__(self, defs = {}, flags = 0):
