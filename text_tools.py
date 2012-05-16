@@ -1,47 +1,47 @@
 # -*- coding: utf-8 -*-
-"""\
-This module provides tools to work with text
-including Unicode
->>> text_e = 'I said: "it should be easy"'
->>> Word1(text_e) == 'I'
-True
->>> Word2(text_e) == 'said'
-True
->>> Word3(text_e) == '"it should be easy"'
-True
->>> Payload(text_e, '"', '"') == 'it should be easy'
-True
->>> s = "0one23four5 8"
->>> t = ['', '0', 'one', '2', '', '3', 'four', '5', ' ', '8', '']
->>> splitted(s, ['\d']) == t
-True
->>> Erase(s, '\d\d', ' ') == '0onefour58'
-True
->>> myhex(576, 5) == '0x00240'
-True
->>> myhex(576, 5, True) == '00240'
-True
->>> text_h = 'כלומר, אין שום משמעות מיוחדת לביטוי "אין זו כריתות"'
->>> Word1(text_h) == 'כלומר'
-True
->>> Word2(text_h) == 'אין'
-True
->>> Word3(text_h)  == 'שום משמעות מיוחדת לביטוי "אין זו כריתות"'
-True
->>> Payload(text_h, '"', '"') == 'אין זו כריתות'
-True
->>> d = ReD({'אין': 'not', 'זה': 'it'}, U)
->>> d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
-True
->>> del d['אין']
->>> d(text_h) == text_h
-True
->>> d['אין'] = 'not'
->>> d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
-True
->>> t = ['כלומר, א', 'ין', ' שום משמעות מ', 'יו', 'חדת לב', 'יט', 'ו', 'י ', '"א', 'ין', ' זו כר', 'ית', 'ות"']
->>> splitted(text_h, ['י.']) == t
-True
+"""
+    This module provides tools to work with text
+    including Unicode
+    >>> text_e = 'I said: "it should be easy"'
+    >>> Word1(text_e) == 'I'
+    True
+    >>> Word2(text_e) == 'said'
+    True
+    >>> Word3(text_e) == '"it should be easy"'
+    True
+    >>> Payload(text_e, '"', '"') == 'it should be easy'
+    True
+    >>> s = "0one23four5 8"
+    >>> t = ['', '0', 'one', '2', '', '3', 'four', '5', ' ', '8', '']
+    >>> splitted(s, ['\d']) == t
+    True
+    >>> Erase(s, '\d\d', ' ') == '0onefour58'
+    True
+    >>> myhex(576, 5) == '0x00240'
+    True
+    >>> myhex(576, 5, True) == '00240'
+    True
+    >>> text_h = 'כלומר, אין שום משמעות מיוחדת לביטוי "אין זו כריתות"'
+    >>> Word1(text_h) == 'כלומר'
+    True
+    >>> Word2(text_h) == 'אין'
+    True
+    >>> Word3(text_h)  == 'שום משמעות מיוחדת לביטוי "אין זו כריתות"'
+    True
+    >>> Payload(text_h, '"', '"') == 'אין זו כריתות'
+    True
+    >>> d = ReD({'אין': 'not', 'זה': 'it'}, U)
+    >>> d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
+    True
+    >>> del d['אין']
+    >>> d(text_h) == text_h
+    True
+    >>> d['אין'] = 'not'
+    >>> d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
+    True
+    >>> t = ['כלומר, א', 'ין', ' שום משמעות מ', 'יו', 'חדת לב', 'יט', 'ו', 'י ', '"א', 'ין', ' זו כר', 'ית', 'ות"']
+    >>> splitted(text_h, ['י.']) == t
+    True
 """
 from __future__ import division, print_function, unicode_literals
 from re import *
@@ -76,7 +76,7 @@ def Word3(s):
     return Payload(s)
 
 def WordL(s): 
-	last_word = compile(r'\w+$', U)
+    last_word = compile(r'\w+$', U)
     try:
         return last_word.search(s).group()
     except AttributeError:
@@ -116,7 +116,7 @@ class ReD(object):
         return repr(self.defs)
 
 def splitted(s, keywords_list, flags = 0):
-    r = compile('({})'.format('|'.join(keywords_list)), M|flags)
+    r = compile('({})'.format('|'.join(keywords_list)), S|M|flags)
     return r.split(s)
     
 def Erase(s, *l):
