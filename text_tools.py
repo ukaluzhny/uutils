@@ -83,37 +83,37 @@ def WordL(s):
         return ''
 
 class ReD(object):
-    def __init__(self, defs = {}, flags = 0):
-        self.defs = defs
+    def __init__(self, defs = None, flags = 0):
+        self.d = defs if defs else dict()
         self.re_defs = None
         self.flags = flags
     def __setitem__(self, key, val):
-        self.defs[key] = val
+        self.d[key] = val
         self.re_defs = None
     def __contains__(self, key):
-        return key in self.defs
+        return key in self.d
     def __delitem__(self, key):
         try:
-            del self.defs[key]
+            del self.d[key]
             self.re_defs = None
         except KeyError:
             warnings.warn("Tried to undef {}".format(key))
     def __call__(self, text):
-        if not self.re_defs and self.defs:
-            v = '|'.join(self.defs.keys())
+        if not self.re_defs and self.d:
+            v = '|'.join(self.d.keys())
             v = r'\b({})\b'.format(v)
             self.re_defs = compile(v, self.flags)
-        if self.defs:
+        if self.d:
             for i in range(100):
-                t = self.re_defs.sub(lambda m: self.defs[m.group(0)], text)
+                t = self.re_defs.sub(lambda m: self.d[m.group(0)], text)
                 if t == text:
                     break
                 text = t
             if i >= 99:
-                raise Exception("Possibly iterative definition in {}".format(self.defs)) 
+                raise Exception("Possibly iterative definition in {}".format(self.d)) 
         return text
     def __repr__(self):
-        return repr(self.defs)
+        return repr(self.d)
 
 def splitted(s, keywords_list, flags = 0):
     r = compile('({})'.format('|'.join(keywords_list)), S|M|flags)
