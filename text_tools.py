@@ -74,11 +74,10 @@ def Word3(s):
     pos = r_word.search(s).end() + 1
     s = s[pos:].strip()
     return Payload(s)
-
 def WordL(s): 
     last_word = compile(r'\w+$', U)
     try:
-        return last_word.search(s).group()
+        return last_word.search(s.rstrip()).group()
     except AttributeError:
         return ''
 
