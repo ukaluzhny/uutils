@@ -4,7 +4,10 @@ import os, mp3play as mp3
 from Tkinter import *
 from math import sqrt
 from subprocess import Popen
-
+from codecs import open as copen
+def uopen(fname, mode = 'r'):
+    return copen(fname, mode, encoding = "utf-8")
+    
 class option_button(Button):
     def __init__(self, master, data):
         ret_value = data
@@ -41,11 +44,12 @@ class table_of_buttons(Frame):
             buttons = buttons[row_len:]
         self.pack()
 
-def get_option(options, header = None, 
-        direction = 'left'):
+def get_option(options, title = "get_option", 
+        header = None, direction = 'left'):
     root = Tk()
+    root.wm_title(title)
     if header:
-        Label(root, text = header).pack()
+        Label(root, text = header).pack(side = 'top')
     def action(n, res = root):
         res.res = n
         res.destroy()
@@ -54,37 +58,32 @@ def get_option(options, header = None,
     gui.mainloop()
     return options[root.res]
 
-# class StrInputWindow(Frame):
-    # def __init__(self, res, master = None):
-        # self.res = res
-        # Frame.__init__(self, master)
-        # self.pack()
+def get_unicode(title = "get_unicode", header = None):
+    root = Tk()
+    root.wm_title(title)
+    if header:
+        Label(root, text = header).pack(side = 'top')
+    gui = Entry()
+    gui.pack()
+    contents = StringVar()
+    def action(event, res = root):
+        res.res = contents.get()
+        res.destroy()
+    gui["textvariable"] = contents
+    gui.bind('<Key-Return>', action)
+    gui.mainloop()
+    return root.res
 
-        # self.entrythingy = Entry()
-        # self.entrythingy.pack()
-        # self.contents = StringVar()
-        # self.entrythingy["textvariable"] = self.contents
-        # self.entrythingy.bind('<Key-Return>',
-                              # self.return_value)
-        # ExitButton(master)
-    # def return_value(self, event):
-        # self.res.val = self.contents.get()
-# def StrInput():
-    # root = Tk()
-    # res = ReadAnswer()
-    # app = StrInputWindow(res, master=root)
-    # app.mainloop()
-    # return res
-
-# def print_gui(*l):
-    # root = Tk()
-    # for i in l:
-        # Label(root, text = unicode(i)).pack()
-    # ExitButton(root)
-    # root.mainloop()
+def print_unicode(*l):
+    root = Tk()
+    for i in l:
+        Label(root, text = unicode(i)).pack()
+    exit_button(root)
+    root.mainloop()
 
 class gui_counter(object):
-    def __init__(self, master, frmt, side, font = '18pt'):
+    def __init__(self, master, frmt, 
+            side, val, font = '18pt'):
         self.label = Label(master, font = font)
         self.label.pack(side = side)
         self.value = 0
@@ -119,10 +118,22 @@ class SlicedMp3(object):
         notepad  = r'"C:\Program Files\Notepad++\notepad++.exe" '
         Popen(audacity + '{}.mp3'.format(self.name))
         Popen(notepad + self.fname())
-    def __getitem__(self, ind):
+    def __call__(self, ind):
         if self.mtime < os.stat(self.fname()).st_mtime:
             self.read_slicing()
         self.mp.play(*self.slicing[ind:ind+2])
         while self.mp.isplaying(): pass
     def __len__(self):
         return len(self.slicing)-1
+
+class speak_button(Button):
+    def __init__(self, master, audio_file, 
+        side = 'top', font = '14pt'):
+        self.mp = audio_file
+        Button(master, font = font).pack(side = side, padx = 1, pady  = 1)
+    def define (self, text2show, ind):
+        def action(mp = self.mp, ind = ind):
+            mp(ind)
+        self["command"] = action
+        self["text"] = text2show
+        
