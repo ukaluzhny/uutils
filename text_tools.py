@@ -123,7 +123,7 @@ def Erase(s, *l):
         r = compile(i)
         s = r.sub('', s)
     return s
-def myhex(x, n, bare = False):
+def hexstr(x, n = 0, bare = False):
     s = (hex(x)[2:]).replace("L", "")
     form = '{}' if bare else '0x{}'
     return form.format(s.zfill(n))
