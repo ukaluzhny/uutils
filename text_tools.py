@@ -89,6 +89,10 @@ class ReD(object):
     def __setitem__(self, key, val):
         self.d[key] = val
         self.re_defs = None
+    def __getitem__(self, key):
+        return self.d[key]
+    def __iter__(self):
+        return iter(self.d)
     def __contains__(self, key):
         return key in self.d
     def __delitem__(self, key):
