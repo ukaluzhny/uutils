@@ -1,6 +1,8 @@
 ﻿# -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
-import os, mp3play as mp3
+import os
+try: import mp3play as mp3
+except ImportError: pass
 from Tkinter import *
 from math import sqrt
 from subprocess import Popen
