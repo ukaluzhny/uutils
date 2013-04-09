@@ -124,7 +124,7 @@ def splitted(s, keywords_list, flags = 0):
     
 def Erase(s, *l):
     for i in l:
-        r = compile(i)
+        r = compile(i, M)
         s = r.sub('', s)
     return s
 def hexstr(x, n = 0, bare = False):
