@@ -128,9 +128,15 @@ def Erase(s, *l):
         s = r.sub('', s)
     return s
 def hexstr(x, n = 0, bare = False):
-    s = (hex(x)[2:]).replace("L", "")
-    form = '{}' if bare else '0x{}'
-    return form.format(s.zfill(n))
+    s = '{:x}'.format(x)
+    s = s.zfill(n)
+    if not bare: s = '0x' + s
+    return s
+def binstr(x, n = 0, bare = False):
+    s = '{:b}'.format(x)
+    s = s.zfill(n)
+    if not bare: s = '0b' + s
+    return s
 def reverse_word_order(w):
    return ' '.join(reversed(w.split()))
   
