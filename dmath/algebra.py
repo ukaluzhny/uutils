@@ -36,22 +36,28 @@
  0 Z2
  
  class ExtentionField defines a general finite field
- Any class derived from ExtentionField shall define its 
- 'BaseF' and the extention polinomial 'p', as in 
- >>> class F8(ExtentionField):
- ...     "Rijndael's Polynom X^8 = X^4 + X^3 + X + 1"
- ...     BaseF = Z2
- ...     p = [1,1,0,1,1,0,0,0]
-  
+ Any class derived from ExtentionField shall define its 'BaseF' 
+ and the extention polinomial 'p',  s.t. x^dim + 'p' = 0
+ see the predefined Rijndael field example 
  >>> a = F8(0x53); b = F8(0xca); c = a + b
- >>> print (a * b == F8(1), (a+F8(1)) * b == b + F8(1))
+ >>> print (a * b == F8(1), (a+F8(1)) * b == F8(1) + b)
  True True
  >>> print (a == b.inv(), (a*c).inv() == b *c.inv())
  True True
+ 
+ A more comlex example:
+ >>> class F27(ExtentionField):
+ ...     "Polynom 0 = X^3 + 2X + 1, over F3"
+ ...     BaseF = Z3
+ ...     p = [1,2,0]
+ ...
+ >>> a = F27(0x29); b = F27(0x10)
+ >>> print (a == b.inv())
+ True
 """
 from __future__ import division, print_function, unicode_literals
-from itertools import chain, repeat
-
+from itertools import chain, repeat, izip_longest
+from numbers import inverse
 class PrimeField(object):
     "Defined by a prime number"
     base = None #abstract class
@@ -96,7 +102,7 @@ class PrimeField(object):
     def inv(self):
         if not self.value:
             raise ZeroDivisionError("Inverting 0?!")
-        return type(self)(pow(self.value, self.base-2, self.base))
+        return type(self)(inverse(self.value, self.base))
     def __truediv__ (self, other):
         return self * other.inv() 
 
@@ -119,10 +125,7 @@ class Z2(PrimeField):
     def __mul__(self, other):
         if type(other) == Z2:
             return Z2(self.value & other.value)
-        elif isVector(other):
-            return type(other)(self*i for i in other)
-        else:
-            raise TypeError("Unsupported type multiplication")
+        else: return PrimeField.__mul__(self, other)
     def inv(self):
         if not self.value:
             raise ZeroDivisionError("Inverting 0?!")
@@ -157,49 +160,36 @@ class VectorSpace(object):
     def overZ2(self):
         return self.BaseF.overZ2()
     def __eq__(self, other):
-        return type(self) == type(other) and\
-            self.value == other.value
+        return (type(self) == type(other) and
+            self.value == other.value)
     def __ne__(self, other):
         return not (self == other)
     def __add__(self, other):
         F = type(self) 
         if self.overZ2():
             return F(self.value ^ other.value)
-        else: #tricky
-            BF = lambda x: x or self.BaseF(0)
-            return F(i + j for i, j in zip(self, other))
+        else:
+            return F(i + j for i, j in izip_longest(self, other, 
+                        fillvalue = self.BaseF(0)))
     def __neg__(self):
         F = type(self) 
         if self.overZ2():
             return F(self)
         else:
             return F(-i for i in self)
-        return type(self)(self)
     def __sub__(self, other):
         return self + (-other)
     def __iter__(self):
         """transforms a number value (bitstring) into an
-            iterator over the list of elements of cls.BaseF followed by one zero"""
+            iterator over the list of elements of BaseF"""
         BF = self.BaseF
         n = BF.bit_capacity()
         m = (1 << n) - 1
         x, i = self.value, 0
-        while x or i <= self.dim():
+        while x or i < self.dim():
             yield(BF(x & m))
             x >>= n
             i += 1
-    # def __getitem__(self, index):
-        # BF = self.BaseF
-        # b = BF.bit_capacity()
-        # m = (1 << b) - 1
-        # return BF((self.value >> (index*b)) & m)
-    # def __setitem__(self, index, val):
-        # BF = self.BaseF
-        # b = BF.bit_capacity()
-        # m = ((1 << b) - 1) << (index*b)
-        # self.value &= ~m
-        # val = BF(val).value
-        # self.value ^= (val << (index*b))
     def __repr__(self):
         return '{}({:#x})'.format(type(self).__name__, self.value)
     def __str__(self):
@@ -207,28 +197,23 @@ class VectorSpace(object):
     def __mul__(self, other):
         "scalar product"
         return sum((i*j for i,j in zip(self,other)), self.BaseF(0))
-    __xor__ = __add__
-    __sub__ = __add__
 def isVector(x):
     return issubclass(type(x), VectorSpace)
 
-def dstr(l):
-    print( ''.join(str(i) for i in l))
 class ExtentionField(VectorSpace):
     """An extention field is defined by its 
         base field 'BaseF', e.g., Z2 and 
-        the extension polinomial 'p', padded with zeroes, 
-            e.g, [1,1,0,1,1,0,0,0] for Rijndael's field """
+        the extension polinomial x^dim + 'p' = 0,  
+        e.g, [1,1,0,1,1,0,0,0] for Rijndael's field """
     BaseF, p = None, None #abstract class
-    def __init__(self, v, reduce = False):
-        if reduce:
-            self.reduct(v)
+    def __init__(self, v):
         VectorSpace.__init__(self, v)
     @classmethod
     def dim(self):
         return len(self.p)
     def __mul__(self,other):
-        "can handle one operand of length self.dim()+1"
+        """can handle one operand of length self.dim()+1
+        as used in inv"""
         F  = type(self)
         BF = self.BaseF
         if type(other) == F:
@@ -237,13 +222,15 @@ class ExtentionField(VectorSpace):
                 for j, u in enumerate(other):
                     if v.value and u.value:
                         res[i+j] = res[i+j] + (v * u)
-            return F(res, True)
+            F.reduct(res)
+            return F(res)
         elif isVector(other):
             return type(other)(self*i for i in other)
         else:
             raise TypeError("Incompatible types in multiplication")
     @classmethod
     def reduct(self, l):
+        "l is a list of self.dim()*2+1 BF elements"
         F  = type(self)
         BF = self.BaseF
         p  = [BF(v) for v in chain(repeat(0, self.dim()), self.p)]
@@ -252,42 +239,32 @@ class ExtentionField(VectorSpace):
             if u.value != 0:
                 for i, v in enumerate(p):
                     if v.value:
-                        v = v*u
-                        l[i] = l[i] - v
+                        l[i] = l[i] - v*u
             p.pop(0) 
     def inv(self):
         F = type(self)
         if self.value == 0:
             raise ZeroDivisionError("Inverting 0?!")
-        
         BF = self.BaseF
-        if self.value.bit_length() <= BF.bit_capacity():
-            return F(BF(self.value).inv())
-            
-        x_inv  = F(self.p[1:]+[1]) #inverse of F(2)
         BFmask = (1 << BF.bit_capacity()) - 1
+        x_inv  = F(self.p[1:]+[1]) #inverse of F([0,1])
+        
         u, v = F(self), F(self.p+[1])
         a, b = F(1),    F(0)
-        while u.value > BFmask:
-            u0 = u.value & BFmask
-            v0 = v.value & BFmask
-            if u0 == 0:
+        Bv = BF(self.p[0])
+        while True:
+            while u.value & BFmask == 0:
                 u = u * x_inv
                 a = a * x_inv
-            if v0 == 0:
-                v = v * x_inv
-                b = b * x_inv
-            if u0 and v0:
-                if u.value > v.value:
-                    u = BF(v0)*u - BF(u0)*v
-                    a = BF(v0)*a - BF(u0)*b
-                    u = u * x_inv
-                    a = a * x_inv
-                else:
-                    v = BF(u0)*v - BF(v0)*u
-                    b = BF(u0)*b - BF(v0)*a
-                    v = v * x_inv
-                    b = b * x_inv
+            if u.value <= BFmask:    
+                break
+            Bu = BF(u.value & BFmask)
+            if v.value > u.value:
+                u, v = v, u
+                a, b = b, a
+                Bu, Bv = Bv, Bu
+            u = Bv*u - Bu*v
+            a = Bv*a - Bu*b
         return BF(u.value).inv() * a        
     def __truediv__(self, other):
         return self*other.inv()
@@ -304,15 +281,11 @@ class ExtentionField(VectorSpace):
             a  = a * a
 
 class F8(ExtentionField):
-    "Rijndael's Polynom X^8 = X^4 + X^3 + X + 1"
+    "Rijndael's Polynom 0 = X^8 + X^4 + X^3 + X + 1"
     BaseF = Z2
     p = [1,1,0,1,1,0,0,0]
+  
 
-a = F8(0x53)
-b = F8(0xca) 
-print (a * b)
-print (a.inv())
- 
 # class Matrix(object):
     # """Matrix is defined by a list of its rows (vectors
         # of the Domain vector space , defined separately.

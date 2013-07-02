@@ -83,6 +83,7 @@ def GCD(x, y):
         x, y = y % x, x
     return y
 def inverse(u, v):
+    'inverse of u mod v'
     a, b = 1, 0
     v_stored = v
     while v:
