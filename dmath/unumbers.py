@@ -1,39 +1,46 @@
 ﻿# -*- coding: utf-8 -*-
 """Basic operations with numbers
-
- A pool of primes from 2 to 997 provided.
- Those are retrieved from a file:
- >>> p = retrieve_primes()
- >>> p[-5:]
- [971, 977, 983, 991, 997]
+ Primes: 
+  A pool of primes from 2 to 997 is provided.
+   Those are retrieved from a file:
+   >>> p = retrieve_primes()
+   >>> p[-5:]
+   [971, 977, 983, 991, 997]
+  
+  Product of consequent primes and the probabiity for 
+   an integer to be devisible by any of them:
+   >>> primes_product(2, 8)
+   1616615
+   >>> primes_prob(2, 8)
+   0.513072067251634
  
- Product of consequent primes and the probabiity for 
- an integer to be devisible by any of them:
- >>> primes_product(2, 8)
- 1616615
- >>> primes_prob(2, 8)
- 0.513072067251634
-
  GCD for Python numbers 
- >>> GCD(127*45, 127*101)
- 127
+  >>> GCD(127*45, 127*101)
+  127
  
- The inverse of u mod v (uses truediv)
- >>> inverse(127, 101) == 35
- True
+ The inverse of u mod v 
+  >>> u = 127; v = 101
+  >>> inverse(u, v) == 35
+  True
 
+ In full mode, inverse returns both coefficients for
+  Bézout's identity a*u + b*v = 1
+  >>> a, b = inverse(u, v, 1)
+  >>> a*u + b*v
+  1
+  
 """
-from __future__ import division, print_function, unicode_literals
 from random import getrandbits
 from os.path import exists, dirname, join
 from struct import pack, unpack
+import array as arr
 
 #random integer
 def ri(n = 96):
     return int(getrandbits(n))
 #primes
 def sieve(N = 1000):
-    buf = range(N)
+    buf = list(range(N))
     buf[1] = 0
     for i in range(2, N):
         d = buf[i]
@@ -44,18 +51,19 @@ def sieve(N = 1000):
     buf = filter(None, buf)
     return buf
 def store_primes(primes):
-    with open(join(dirname(__file__), 'primes.dat'), 'w') as f:
+    with open(join(dirname(__file__), 'primes.dat'), 'wb') as f:
         for n in primes:
             f.write(pack('i', n))
 def retrieve_primes():
     try:
         primes = []
-        with open(join(dirname(__file__), 'primes.dat')) as f:
+        with open(join(dirname(__file__), 'primes.dat'), 'rb') as f:
             while True:
                 n = f.read(4)
                 if not n: break
                 primes.append(unpack('i', n)[0])  
-    except IOError:
+    except IOError as e:
+        print (e)
         print ("Cannot find primes.dat, generating primes")
         primes = sieve()
         try: 
@@ -82,17 +90,20 @@ def GCD(x, y):
     while x > 0:
         x, y = y % x, x
     return y
-def inverse(u, v):
-    'inverse of u mod v'
+def inverse(u, v, full = 0):
+    'inverse of u mod v '
     a, b = 1, 0
     v_stored = v
+    u_stored = u
     while v:
-        q = u // v
+        q = u // v #uses truediv
         u, v = v, u - v*q
         a, b = b, a - b*q
-    return a % v_stored
+    a %= v_stored
+    if full: return a, -(a*u_stored-1)//v_stored
+    return a
 
-
+    
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1: 
