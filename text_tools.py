@@ -43,7 +43,6 @@
     >>> splitted(text_h, ['י.']) == t
     True
 """
-from __future__ import division, print_function, unicode_literals
 from re import *
 import warnings
 r_word = compile(r'\w+', U)
@@ -143,5 +142,4 @@ def reverse_word_order(w):
 if __name__ == "__main__":
    import doctest
    doctest.testmod()
-   raw_input("Press 'Enter'...")
  

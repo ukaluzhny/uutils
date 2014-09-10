@@ -1,30 +1,36 @@
 # -*- coding: utf-8 -*-
 """tricks with bits
-   hw(x), hamming_weight  
+   hw(x): hamming_weight  
     x may be an object with 'value' or an iterable.
     >>> hw(0x12345) == 7
     True
     >>> hw([0x1234, 5]) == 7
     True
  
-   lb(x), the least significant bit set in x
+   lb(x): the least significant bit set in x
     >>> lb(0x1230) == 0x10
     True
   
-   masks(m, n), iterates through numbers with m out of n bits set
+   masks(m, n): iterates through numbers with m out of n bits set
     >>> list(masks(2, 3))
     [3, 5, 6]
     
-   products(subdim, dim), iterates through all subdim subspaces 
+   products(subdim, dim): iterates through all subdim subspaces 
     of the dim-dimensional cube.  Returns (mask, v), so
     that a subspace is defined as {x| x & mask == v}.
     >>> list(products(2,3))[:7]
     [(3, 0), (3, 1), (3, 2), (3, 3), (5, 0), (5, 1), (5, 4)]
 
-    
-# a = bit.Permutation([1,3,2,0])
-# b = bit.Permutation([1,0,3,2])
-# l = ['a','b','c','d']
+   class Permutation: for shuffling according to list-defined perm. 
+    >>> a = Permutation([1,3,2,0])
+    >>> b = Permutation([1,0,3,2])
+    >>> l = ['a','b','c','d']    
+    >>> list((a*b)(l)) == list(a(list(b(l))))
+    True
+    >>> a+b
+    1,3,2,0,5,4,7,6
+    >>> a*(~a)
+    0,1,2,3
 """
 
 def hw(x):
@@ -98,30 +104,26 @@ class Permutation(object):
         for i, v in enumerate(self.p):
             res[v] = i
         return Permutation(res)
-    def shuffle(self, l):
-        p = [None]* len(l)
-        for i, x in enumerate(l):
-            p[self[i]] = x
-        for i, x in enumerate(p):
-            l[i] = x
+    def __call__(self, l):
+        return (l[i] for i in self.p)
     def __mul__(self, other):
-        p = list(self.p)
-        other.shuffle(p)
-        return Permutation(p)
+        return Permutation(self(other.p))
     def __add__(self, other):
         l = len(self.p)
         res = Permutation(self.p)
         for i in other:
             res.p.append(l+i)
         return res
-             
+    def shuffle(self, l):
+        for i, x in enumerate(self(l)):
+            l[i] = x
+        
 def Plain(n):
     'Permutation(0, 1, ..., n-1)'
-    return Permutation(xrange(n))
+    return Permutation(range(n))
 def Flip(n):
     'Permutation(n-1, n-2, ..., 0)'
-    p = xrange(n-1, -1, -1)
-    return Permutation(p)
+    return Permutation(range(n-1, -1, -1))
 def Deal(n, step):
     'Permutation(0, 2, ..., 1, 3, ...)'
     p = []
@@ -137,81 +139,81 @@ class Shuffler(object):
         p.shuffle(l)
     
                 
-class PartialFunction(object):
-    def __init__(self, p):
-        self.p = dict(p)
-    def __getitem__(self, value):
-        return self.p.get(value)
-    def __repr__(self):
-        return repr(self.p)
-    def __iter__(self):
-        return self.p.iterkeys()
-    def range(self):
-        return self.p.itervalues()
-    def __mul__(self, other):
-        p = dict()
-        for i in other:
-            p[i] = self[other[i]]
-        return PartialFunction(p)
+# class PartialFunction(object):
+    # def __init__(self, p):
+        # self.p = dict(p)
+    # def __getitem__(self, value):
+        # return self.p.get(value)
+    # def __repr__(self):
+        # return repr(self.p)
+    # def __iter__(self):
+        # return self.p.iterkeys()
+    # def range(self):
+        # return self.p.itervalues()
+    # def __mul__(self, other):
+        # p = dict()
+        # for i in other:
+            # p[i] = self[other[i]]
+        # return PartialFunction(p)
 
-def Logic(object):
-    '''logical representation of a (partial) function f
-       from n bits to m bits'''
-    def __init__(self, func, n, m):
-        self.f = []
-        self.input_width = n
-        self.output_width = m
-        for i in xrange(m):
-            output_bit = 1 << i
-            positive_points, neutral_points = [], []
-            for i in xrange(1 << n):
-                p = func[i]
-                if p == None: neutral_points.append(i)
-                elif output_bit & p: 
-                    positive_points.append(i)
-            n2cover = len(positive_points)
-            if n2cover == 0:
-                self.f.append([])
-            else:
-                points = positive_points + neutral_points
-                self.f.append(self.build(points, n2cover))
-    def build(self, points, n2cover):
-        sop = []
-        for j in range(1, self.input_width): 
-            if n2cover == 0: break
-            capacity = 1 << (self.input_width - j)
-            for g in products(j, self.input_width):
-                g_contains = lambda p: (g[0] & p) == g[1]
-                if not any(g_contains(p) for p in points[:n2cover]):
-                    continue
-                if sum (g_contains(p) for p in points) != capacity:
-                    continue #this product is not full
-                sop.append(g)
-                i = 0
-                n2cover -= 1
-                while True:
-                    while not g_contains(points[i]) and i < n2cover: 
-                        i += 1
-                    while g_contains(points[n2cover]) and i < n2cover:
-                        n2cover -= 1
-                    if i == n2cover:
-                        if not g_contains(points[i]): n2cover += 1
-                        break
-                    points[n2cover], points[i] = points[i], points[n2cover]
-                    i += 1
-                    n2cover -= 1
-                if n2cover == 0: break
-        return sop
-    def __call__(self, arg):
-        res = 0
-        for i in xrange(self.output_width):
-            output_bit = 1 << i
-            sop = self.f[i]
-            for p in sop:
-                if i & p[0] == p[1]:
-                    res |= output_bit
-                    break
-        return res
+# def Logic(object):
+    # '''logical representation of a (partial) function f
+       # from n bits to m bits'''
+    # def __init__(self, func, n, m):
+        # self.f = []
+        # self.input_width = n
+        # self.output_width = m
+        # for i in range(m):
+            # output_bit = 1 << i
+            # positive_points, neutral_points = [], []
+            # for i in range(1 << n):
+                # p = func[i]
+                # if p == None: neutral_points.append(i)
+                # elif output_bit & p: 
+                    # positive_points.append(i)
+            # n2cover = len(positive_points)
+            # if n2cover == 0:
+                # self.f.append([])
+            # else:
+                # points = positive_points + neutral_points
+                # self.f.append(self.build(points, n2cover))
+    # def build(self, points, n2cover):
+        # sop = []
+        # for j in range(1, self.input_width): 
+            # if n2cover == 0: break
+            # capacity = 1 << (self.input_width - j)
+            # for g in products(j, self.input_width):
+                # g_contains = lambda p: (g[0] & p) == g[1]
+                # if not any(g_contains(p) for p in points[:n2cover]):
+                    # continue
+                # if sum (g_contains(p) for p in points) != capacity:
+                    # continue #this product is not full
+                # sop.append(g)
+                # i = 0
+                # n2cover -= 1
+                # while True:
+                    # while not g_contains(points[i]) and i < n2cover: 
+                        # i += 1
+                    # while g_contains(points[n2cover]) and i < n2cover:
+                        # n2cover -= 1
+                    # if i == n2cover:
+                        # if not g_contains(points[i]): n2cover += 1
+                        # break
+                    # points[n2cover], points[i] = points[i], points[n2cover]
+                    # i += 1
+                    # n2cover -= 1
+                # if n2cover == 0: break
+        # return sop
+    # def __call__(self, arg):
+        # res = 0
+        # for i in range(self.output_width):
+            # output_bit = 1 << i
+            # sop = self.f[i]
+            # for p in sop:
+                # if i & p[0] == p[1]:
+                    # res |= output_bit
+                    # break
+        # return res
 
                
 if __name__ == "__main__":

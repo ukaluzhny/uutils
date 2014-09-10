@@ -1,34 +1,41 @@
 ﻿# -*- coding: utf-8 -*-
 """Basic operations with numbers
+ ri: random integer
+ 
  Primes: 
-  A pool of primes from 2 to 997 is provided.
+  retrieve_primes: a pool of primes from 2 to 997
    Those are retrieved from a file:
    >>> p = retrieve_primes()
    >>> p[-5:]
    [971, 977, 983, 991, 997]
   
-  Product of consequent primes and the probabiity for 
-   an integer to be devisible by any of them:
+  primes_product: product of consequent primes
    >>> primes_product(2, 8)
    1616615
+   
+  primes_prob: probabiity to be devisible by the indexed primes 
    >>> primes_prob(2, 8)
    0.513072067251634
- 
- GCD for Python numbers 
+  
+  fermat_test: Fermat primality test
+   >>> x = 0x3473ab29; print(fermat_test(x), fermat_test(x, 3))
+   True False
+   
+ GCD: for Python numbers 
   >>> GCD(127*45, 127*101)
   127
  
- The inverse of u mod v 
+ inverse: modular. In full mode, returns coefficients for Bézout's identity
   >>> u = 127; v = 101
   >>> inverse(u, v) == 35
   True
-
- In full mode, inverse returns both coefficients for
-  Bézout's identity a*u + b*v = 1
   >>> a, b = inverse(u, v, 1)
   >>> a*u + b*v
   1
-  
+
+ inv32: inverse mod 2**32; the argument shall be odd 
+  >>> inv32(0x12345)
+  3329816461
 """
 from random import getrandbits
 from os.path import exists, dirname, join
@@ -82,7 +89,8 @@ def primes_prob(n, m):
     for i in range(n, m):
         res *= (1-1./__primes[i])
     return res
-
+def fermat_test (p, a = 2):
+    return pow(a, p-1, p) == 1
     
 def GCD(x, y):
     x = abs(x) 
@@ -103,6 +111,14 @@ def inverse(u, v, full = 0):
     if full: return a, -(a*u_stored-1)//v_stored
     return a
 
+def inv32(b):
+    "inverse of b mod 2**32"
+    assert(b & 1)
+    x = (((b + 2) & 4) << 1) + b
+    x *= 2 - b * x             
+    x *= 2 - b * x             
+    x *= 2 - b * x             
+    return x & 0xffffffff
     
 if __name__ == "__main__":
     import sys

@@ -82,7 +82,7 @@
 """
 from itertools import chain, repeat, zip_longest
 from operator import itemgetter, attrgetter
-from unumbers import inverse
+from .unumbers import inverse
 
 class PrimeField(object):
     "Defined by a prime number 'base'"
