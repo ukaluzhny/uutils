@@ -7,6 +7,13 @@ from sys import stdout
 from os         import listdir, mkdir, remove, chdir, getcwd
 from os.path    import isdir, join, exists
 
+def save_with_backup(fname, s):
+    backup = "{}_backup{}".format(*splitext(fname))
+    if exists(fname):
+        if exists(backup): remove(backup)
+        open(backup, 'w').write(open(fname).read())
+    open(fname, 'w').write(s)
+
 r_word = compile(r'\w+', U)
 r_space = compile(r'\s+', U)
 

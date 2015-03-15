@@ -21,15 +21,16 @@
    >>> x = 0x3473ab29; print(fermat_test(x), fermat_test(x, 3))
    True False
    
- GCD: for Python numbers 
-  >>> GCD(127*45, 127*101)
+ gcd: for Python numbers 
+  >>> gcd(127*45, 127*101)
   127
  
- inverse: modular. In full mode, returns coefficients for Bézout's identity
+ inverse(u, v, full = False): modular inverse. 
+ In full mode, returns coefficients for Bézout's identity
   >>> u = 127; v = 101
   >>> inverse(u, v) == 35
   True
-  >>> a, b = inverse(u, v, 1)
+  >>> a, b = inverse(u, v, True)
   >>> a*u + b*v
   1
 
@@ -92,13 +93,13 @@ def primes_prob(n, m):
 def fermat_test (p, a = 2):
     return pow(a, p-1, p) == 1
     
-def GCD(x, y):
+def gcd(x, y):
     x = abs(x) 
     y = abs(y)
     while x > 0:
         x, y = y % x, x
     return y
-def inverse(u, v, full = 0):
+def inverse(u, v, full = False):
     'inverse of u mod v '
     a, b = 1, 0
     v_stored = v
