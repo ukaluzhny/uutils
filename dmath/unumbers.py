@@ -17,9 +17,13 @@
    >>> primes_prob(2, 8)
    0.513072067251634
   
-  fermat_test: Fermat primality test
+  fermat_test: Fermat primality test (by default, on 2)
    >>> x = 0x3473ab29; print(fermat_test(x), fermat_test(x, 3))
    True False
+   
+  prime30: returns a 30 bit prime number
+   >>> x = prime30(); print(fermat_test(x, 5), fermat_test(x, 7))
+   True True
    
  gcd: for Python numbers 
   >>> gcd(127*45, 127*101)
@@ -44,8 +48,10 @@ from struct import pack, unpack
 import array as arr
 
 #random integer
-def ri(n = 96):
-    return int(getrandbits(n))
+def ri(n = 96, sparse = False):
+    a = getrandbits(n)
+    if sparse: a & getrandbits(n)
+    return int(a)
 #primes
 def sieve(N = 1000):
     buf = list(range(N))
@@ -120,6 +126,19 @@ def inv32(b):
     x *= 2 - b * x             
     x *= 2 - b * x             
     return x & 0xffffffff
+
+def prime30():
+    first_primes = 3 * 5 * 7 * 11 * 13 * 17
+    found = False
+    while not found:
+        candidate = ri(30) | 1
+        d = gcd(candidate, first_primes)
+        if d != 1:
+            candidate += (first_primes // d) << 1
+        if candidate >> 30: continue
+        if fermat_test(candidate) and fermat_test(candidate, 3):
+            found = True
+    return candidate
     
 if __name__ == "__main__":
     import sys

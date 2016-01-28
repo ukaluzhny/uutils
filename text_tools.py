@@ -1,51 +1,51 @@
 # -*- coding: utf-8 -*-
-"""
-    This module provides tools to work with text
-    including Unicode
+"""This module provides tools to work with (Unicode) text
+   Word1, Word2, Word3etc and Payload
     >>> text_e = 'I said: "it should be easy"'
     >>> Word1(text_e) == 'I'
     True
     >>> Word2(text_e) == 'said'
     True
-    >>> Word3(text_e) == '"it should be easy"'
+    >>> Word3etc(text_e) == ': "it should be easy"'
     True
-    >>> Payload(text_e, '"', '"') == 'it should be easy'
+    >>> Payload(text_e, '"', 'easy') == 'it should be'
     True
-    >>> s = "0one23four5 8"
-    >>> t = ['', '0', 'one', '2', '', '3', 'four', '5', ' ', '8', '']
-    >>> splitted(s, ['\d']) == t
-    True
-    >>> Erase(s, '\d\d', ' ') == '0onefour58'
-    True
-    >>> hexstr(576, 5) == '0x00240'
-    True
-    >>> hexstr(576, 5, True) == '00240'
-    True
+
     >>> text_h = 'כלומר, אין שום משמעות מיוחדת לביטוי "אין זו כריתות"'
     >>> Word1(text_h) == 'כלומר'
     True
     >>> Word2(text_h) == 'אין'
     True
-    >>> Word3(text_h)  == 'שום משמעות מיוחדת לביטוי "אין זו כריתות"'
+    >>> Word3etc(text_h)  == 'שום משמעות מיוחדת לביטוי "אין זו כריתות"'
     True
-    >>> Payload(text_h, '"', '"') == 'אין זו כריתות'
+    
+    >>> s = "0one23four5 8"
+    >>> t = ['', '0', 'one', '23', 'four', '5 ', '', '8', '']
+    >>> Splitted(s, ['\d+']) == t
     True
-    >>> d = ReD({'אין': 'not', 'זה': 'it'}, U)
-    >>> d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
+    >>> Erase(s, '\d+') == 'onefour'
     True
-    >>> del d['אין']
-    >>> d(text_h) == text_h
+    
+    ### hexstr(576, 5) == '0x00240'
     True
-    >>> d['אין'] = 'not'
-    >>> d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
+    ### hexstr(576, 5, True) == '00240'
     True
-    >>> t = ['כלומר, א', 'ין', ' שום משמעות מ', 'יו', 'חדת לב', 'יט', 'ו', 'י ', '"א', 'ין', ' זו כר', 'ית', 'ות"']
-    >>> splitted(text_h, ['י.']) == t
+    ### d = ReD({'אין': 'not', 'זה': 'it'}, U)
+    ### d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
+    True
+    ### del d['אין']
+    ### d(text_h) == text_h
+    True
+    ### d['אין'] = 'not'
+    ### d(text_h) == u'כלומר, not שום משמעות מיוחדת לביטוי "not זו כריתות"'
+    True
+    ### t = ['כלומר, א', 'ין', ' שום משמעות מ', 'יו', 'חדת לב', 'יט', 'ו', 'י ', '"א', 'ין', ' זו כר', 'ית', 'ות"']
+    ### splitted(text_h, ['י.']) == t
     True
 """
-from re import *
+import re
 import warnings
-r_word = compile(r'\w+', U)
+r_word = re.compile(r'\w+', re.UNICODE)
 heb_colon = u"\u05c3"
 
 def Word1(s):
@@ -56,30 +56,39 @@ def Word1(s):
 def Word2(s):
     try:
         pos = r_word.search(s).end()
-        return r_word.search(s[pos + 1:]).group()
+        return r_word.search(s[pos:]).group()
     except AttributeError:
         return ''
 def Payload(l, after  = ' ', before = ''):
-    offset = len(after)
     pos = l.find(after)
+    if pos == -1: return ""
+    offset = len(after)
     pos_l = -1
     if before:
-        pos_l = l.find(before, pos+1)
+        pos_l = l.find(before, pos + offset)
     if pos_l == -1: 
         pos_l = len(l)
-    return l[pos + offset:pos_l].strip() if pos != -1 else ''
-def Word3(s):
-    "Actually, returns everything after the second word"
-    pos = r_word.search(s).end() + 1
-    s = s[pos:].strip()
-    return Payload(s)
-def WordL(s): 
-    last_word = compile(r'\w+$', U)
-    try:
-        return last_word.search(s.rstrip()).group()
-    except AttributeError:
-        return ''
+    return l[pos + offset : pos_l].strip()
+def Word3etc(s):
+    "Returns everything after the second word"
+    pos1 = r_word.search(s).end()
+    pos2 = r_word.search(s[pos1:]).end()
+    return s[pos1 + pos2:].strip()
 
+def Splitted(s, separator_list, flags = 0):
+    # S: without this flag, '.' will match anything except a newline
+    separators = '|'.join(r'\s*{}\s*'.format(i) 
+        for i in separator_list)
+    separators = "({}|\s+)".format(separators)
+    r = re.compile(separators, re.DOTALL | re.MULTILINE | flags)
+    return r.split(s)
+def Erase(s, *l):
+    words = '|'.join(r'\s*{}'.format(i) for i in l)
+    r = re.compile(words, re.MULTILINE)
+    s = r.sub('', s)
+    return s
+
+"""
 class ReD(object):
     def __init__(self, defs = None, flags = 0):
         self.d = defs if defs else dict()
@@ -117,15 +126,6 @@ class ReD(object):
     def __repr__(self):
         return repr(self.d)
 
-def splitted(s, keywords_list, flags = 0):
-    r = compile('({})'.format('|'.join(keywords_list)), S|M|flags)
-    return r.split(s)
-    
-def Erase(s, *l):
-    for i in l:
-        r = compile(i, M)
-        s = r.sub('', s)
-    return s
 def hexstr(x, n = 0, bare = False):
     s = '{:x}'.format(x)
     s = s.zfill(n)
@@ -138,7 +138,8 @@ def binstr(x, n = 0, bare = False):
     return s
 def reverse_word_order(w):
    return ' '.join(reversed(w.split()))
-  
+"""
+    
 if __name__ == "__main__":
    import doctest
    doctest.testmod()
