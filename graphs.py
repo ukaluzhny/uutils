@@ -107,34 +107,55 @@ class Graph(object):
         #reads a graph from a sequence of directives
         #each line is of the form: left_hand_side [assign right_hand_side][// comment]
         #right_hand_side is a sequence names interleaved with operators
-        operators += ['+', '-', '*', ',', '?', '^', '#', '~', '/', '%', '$']
-        ends += [';', "\n"]
+        operators += ['+', '-', '*', ',', '?', '^', '#', '~', '/', '%', '$', '|', '(']
+        ends += [')', ';', '\n']
         assign += [':=', "="]
         token_separators = chain(operators, ends, assign)
         seps = '|'.join(r'\{}'.format(i) for i in token_separators)
         text = '\n'.join(l[:l.find('\\')] for l in text.splitlines(1))
         dest = None
+        op1 = None
+        op2 = None
         side = "LH" # starts from the left hand side
         operator = ""
         tokens = re.split("({})".format(seps), text)
         for s in tokens:
             if s in ends:
+                if op2: 
+                    operator, name = op2
+                    self.add_node(name)
+                    if operator != "(":
+                        self.add_edge(name, dest, operator)
+                        operator, name = op1
+                        self.add_node(name)
+                        self.add_edge(name, dest, operator)
+                    else:
+                        operator, fname = op1
+                        self.add_edge(name, dest, operator + fname)
+                elif op1:
+                    operator, name = op1
+                    self.add_node(name)
+                    self.add_edge(name, dest, operator)
                 dest = None
+                op1 = None
+                op2 = None
                 side = "LH"
                 continue
             s = s.strip()
             if not s: continue
             if s in assign:
                 side = "RH"
+                operator = ""
             elif s in operators:
+                assert side == "RH", "No operators allowed in LH side"
                 operator = s
             else:
                 if side == "LH":
                     dest = s
                     self.add_node(dest)
                 else:
-                    self.add_node(s)
-                    self.add_edge(s, dest, operator)
+                    if not op1: op1 = (operator, s)
+                    else: op2 = (operator, s)
                     operator = ""
     def fcone(self, *init_set):
         res = set(init_set)
@@ -156,7 +177,10 @@ class Graph(object):
                 if target in res: 
                     res.add(source)
         return res            
-                
+
+a = Graph()
+a.read_directives(open("test_graph.txt").read())
+a.tgf("test")                
 
 if __name__ == "__main__":
     import sys
