@@ -19,10 +19,12 @@
 *churn.cpp
 *memenc.cpp
 *temp*
+*.pyc
 Debug/
 Release/
 test.*
 script.py
 
 /dmath/primes.dat
-/todo.txt
+npp/Samples
+npp/run.py

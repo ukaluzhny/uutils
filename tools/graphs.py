@@ -1,5 +1,11 @@
 """Graph related utilities
-
+ A graph is represented by 
+    a list of groups and 
+    a list of edges
+ a group is a dictionary: node_name->properties
+ by default, all un-grouped nodes belong to "group" 0
+ to add groups, first use add_group
+ 
 
 """
 import re
@@ -8,46 +14,47 @@ from os.path import isdir, join, exists, split, splitext
 from itertools import chain
         
 class Group(object):
-    def __init__(self, label = "", properties = None):
-        self.label = label
+    def __init__(self, group_name, properties = None):
+        self.name = group_name
         self.properties = properties
-        self.nodes = dict() #name -> properties
+        self.nodes = dict() #node_name -> properties
     def __repr__(self):
-        return ', '.join([self.label, str(self.nodes)])
-    def __setitem__(self, name, properties):
-        self.nodes[name] = properties
-    def __getitem__(self, name):
-        return self.nodes[name]
-    def __contains__(self, name):
-        return (name in self.nodes)
+        return ', '.join([self.name, str(self.nodes)])
+    def __setitem__(self, node_name, properties):
+        self.nodes[node_name] = properties
+    def __getitem__(self, node_name):
+        return self.nodes[node_name]
+    def __contains__(self, node_name):
+        return (node_name in self.nodes)
     def __iter__(self):
         return iter(self.nodes)
 class Graph(object):
     def __init__(self):
         self.groups = [dict()]
         self.edges = []
-    def add_node(self, name, group = 0, properties = None):
-        prev_group = self.group(name)
+    def add_group(self, group_name, properties = None):
+        self.groups.append(Group(group_name, properties))
+    def add_node(self, node_name, group_name = "", properties = None):
+        prev_group = self.find_group_id(node_name)#may return None
+        group = self.return_group_id(group_name)
         if  prev_group != None:
-            prev_properties = self.groups[prev_group].pop(name)
+            prev_properties = self.groups[prev_group].pop(node_name)
             assert not prev_properties or not properties
             assert not prev_group or not group
             group = group or prev_group
             properties = properties or prev_properties
-            self.groups[group][name] = properties
+            self.groups[group][node_name] = properties
         else:
-            self.groups[group][name] = properties 
-    def set_group(self, name, group):
-        prev_group = self.group(name)
-        properties = self.groups[prev_group].pop(name)
-        self.groups[group][name] = properties
-    def group(self, name):
+            self.groups[group][node_name] = properties 
+    def find_group_id(self, node_name):
         for i, group in enumerate(self.groups):
-            if name in group: return i
+            if node_name in group: return i
+    def return_group_id(self, group_name):
+        for i, group in enumerate(self.groups):
+            if i == 0: continue
+            if group_name == group.name: return i
     def add_edge(self, source, target, label = "", properties = None):
         self.edges.append((source, target, label, properties))
-    def add_group(self, label = "", properties = None):
-        self.groups.append(Group(label, properties))
     def gml(self, fname, graphics = None):
         graphics = graphics or (lambda x: "")  
         formats = {
@@ -67,8 +74,9 @@ class Graph(object):
         for group_id, group in enumerate(self.groups):
             if group_id != 0:
                 body += formats["group"].format(group_id, 
-                    group.label, graphics(group.properties))                
+                    group.name, graphics(group.properties))                
                 gid = "gid {}\n".format(group_id)
+                all_nodes[group.name] = group_id
             for node in group:
                 properties = group[node]
                 body += formats["node"].format(node_counter, 
@@ -178,9 +186,7 @@ class Graph(object):
                     res.add(source)
         return res            
 
-a = Graph()
-a.read_directives(open("test_graph.txt").read())
-a.tgf("test")                
+                
 
 if __name__ == "__main__":
     import sys
@@ -189,5 +195,7 @@ if __name__ == "__main__":
             import doctest
             doctest.testmod()
         elif sys.argv[1] == '-h': 
-            print ("Use -v  to run self-test")
+            print ("Use -v  to run self-test\n","Use -d fname to directives to output.tgf\n")
+        elif sys.argv[1] == '-d': 
+            Graph().read_directives(open(sys.argv[2]).read()).tgf("output")
 

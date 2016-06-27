@@ -1,5 +1,4 @@
-﻿# -*- coding: utf-8 -*-
-"""Basic operations with numbers
+﻿"""Basic operations with numbers
  Primes:
   primes: a pool of primes from 2 to 997
    Those are retrieved from a file:
@@ -11,7 +10,7 @@
    >>> primes_product(2, 8)
    1616615
 
-  primes_prob: probabiity to be devisible by the indexed primes
+  primes_prob: probability to be divisible by the indexed primes
    >>> primes_prob(2, 8)
    0.513072067251634
 
@@ -35,7 +34,21 @@
  inv32: inverse mod 2**32; the argument shall be odd
   >>> inv32(0x12345)
   3329816461
-"""
+  
+ n2w: a Python integer -> C style WINT
+  >>> n2w(0x4000000030000000200000001)
+   {0x00000001, 0x00000002, 0x00000003, 0x00000004}
+ 
+ n2a, a2n: a Python integer <-> list of words, LE
+  >>> l = n2a(0x12345678abcd1234)
+  >>> l == [0xabcd1234, 0x12345678] #LE array
+  True
+  >>> x = un.ri() #a random integer, by default 96 bit long
+  >>> l = n2a(x)
+  >>> a2n(l) == x
+  True
+
+  """
 from os.path import exists, dirname, join
 from struct import pack, unpack
 
@@ -141,6 +154,44 @@ def prime30():
             found = True
     return candidate
 
+def n2w(x, name = "", printing = True):
+    "Python integer ->  C style WINT"
+    l = n2a(x)
+    res = ', '.join(
+        '0x{:08x}'.format(i) for i in l)
+    res = name + ' {'+res+'}'
+    if printing: print(res)
+    else: return res
+    
+def n2f(f, *p):
+    while p:
+        (x, l), p = p[:2], p[2:]
+        f.write(pack('{}I'.format(l), *n2a(x, l)))
+        
+def n2a(n, l = None):
+    "LE array of words"
+    res = []
+    if not l: l = (n.bit_length() + 31) //32
+    for j in range(l):
+        i, n = n & 0xffffffff, n >> 32
+        res.append(i)
+    return res
+def a2n(l):
+    res = 0
+    for i in reversed(l): 
+        res <<= 32
+        res |= i
+    return res
+    
+def f2n(f, *p):
+    res = []
+    for l in p:
+        x = unpack('{}I'.format(l), f.read(4*l))
+        res.append(a2n(x))
+    return res
+
+def read_ints(fname, *lens):
+    return f2n(open(fname, 'rb'), *lens)
 
 if __name__ == "__main__":
     import sys

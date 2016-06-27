@@ -82,7 +82,7 @@
 """
 from itertools import chain, repeat, zip_longest
 from operator import itemgetter, attrgetter
-from unumbers import inverse
+from uutils.dmath.unumbers import inverse
 
 class PrimeField(object):
     "Defined by a prime number 'base'"
@@ -464,7 +464,7 @@ class Matrix(object):
                     M[i] += a*M[r]
                     N[i] += a*N[r]
         v = sorted(zip(M, N), key=lambda p: p[0].value)
-        N.rows = map(itemgetter(1), v)
+        N.rows = list(map(itemgetter(1), v))
         return N
 
 def V2(n, F = Z2):

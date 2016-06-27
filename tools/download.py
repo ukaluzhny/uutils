@@ -7,31 +7,33 @@ from sys import stdout
 from os         import listdir, mkdir, remove, chdir, getcwd
 from os.path    import isdir, join, exists
 
-def save_with_backup(fname, s):
-    backup = "{}_backup{}".format(*splitext(fname))
-    if exists(fname):
-        if exists(backup): remove(backup)
-        open(backup, 'w').write(open(fname).read())
-    open(fname, 'w').write(s)
-
 r_word = compile(r'\w+', U)
 r_space = compile(r'\s+', U)
+
+def Item1(s):
+    if s.startswith('"'):
+        return s[1:s.find('"', 1)].strip()
+    try:
+        pos = r_space.search(s).start()
+        return s[:pos]
+    except AttributeError:
+        return s
+def Item2(s):
+    w = Item1(s)
+    s = s[len(w):].strip()
+    return Item1(s)
 
 def level(s):
     return r_word.search(s).start() // 4
 
-downloads_home = r"C:\Users\ukaluzhn\Downloads"    
-def store(d):
-    notice("creating {}".format(d))
-    stub = "stub"
-    open(d, 'w').write(stub)
         
-dest = []
+source, dest = [], []
 current_level = -1
 
 debugging = False
-if not debugging: 
+if debugging: 
     dhandler = NullHandler(level = DEBUG)
+    dhandler.format_string = '{record.message}'
     dhandler.push_application()
 handler = StreamHandler(stdout, level = NOTICE)
 handler.format_string = '{record.message}'
@@ -43,21 +45,23 @@ for s in open("todo.txt"):
     debug("levels {}, {}".format(current_level, l))
     s = s.strip()
     if not s: continue
-    d = join(downloads_home,  *dest)
     if l > current_level:
+        d = join(downloads_home,  *dest)
         if not isdir(d): mkdir(d)
     if l <= current_level:  
-        if current_level: 
-            if '.' in d: store(d)
-            else: 
-                if not isdir(d): mkdir(d)
+        if current_level: store()
+        source = source[:l]
         dest = dest[:l]
-        debug("reduce  to {}".format(dest))
-    dest.append(s)
+        debug("reduce  to {}, {}".format(source,dest))
+    w1 = Item1(s)    
+    source.append(w1)
+    w2 = Item2(s)
+    dest.append(w2 if w2 else w1)
+    debug("got {}, {}".format(source, dest))
     if l != current_level:
         current_level = l
         continue
-store(d)    
+store()    
 if debugging: dhandler.pop_application()
 handler.pop_application()
         

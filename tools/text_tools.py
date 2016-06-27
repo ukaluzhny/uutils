@@ -53,6 +53,9 @@ def Word1(s):
         return r_word.search(s).group()
     except AttributeError:
         return ''
+def Words(s):
+    for m in r_word.finditer(s):
+        yield m.group(0)        
 def Word2(s):
     try:
         pos = r_word.search(s).end()
