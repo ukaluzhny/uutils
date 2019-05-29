@@ -20,13 +20,6 @@ import site
 # This sets the stdout to be the currently active document,
 sys.stdout = editor
 
-sys.path = [ 
-r'C:\python27\DLLs', r'C:\python27\lib', 
-r'C:\python27\lib\lib-tk', r'C:\python27\lib\site-packages', r'C:\python27', 
-r'C:\Program Files (x86)\Notepad++\plugins\PythonScript\scripts',
-r'C:\Program Files (x86)\Notepad++\plugins\PythonScript\lib', r'C:\work_space'
-]
-
 from text_tools import split2lists, join2text
 from itertools import izip_longest
 

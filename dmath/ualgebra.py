@@ -14,9 +14,9 @@
   
   Z2, an optimized PrimeField, is predefined  
   >>> Z2(0)+Z2(1)
-  Z2(1)
+  1
   >>> Z2(0)*Z2(1)
-  Z2(0)
+  0
  
  class VectorSpace - an abstract class.
   A derived vector space is defined by its 'BaseF' and 'dimension'.
@@ -35,8 +35,8 @@
  
  class ExtentionField  - an abstract class.
   A derived finite field is defined by its 'BaseF' 
-  and the extention polinomial 'p',  s.t. x^dim + 'p' = 0,
-  see the predefined Rijndael field F8 for an example 
+  and the extension polynomial 'p',  s.t. x^dim + 'p' = 0,
+  see the predefined AES field F8 for an example 
   
   >>> a = F8(0x53); b = F8(0xca); c = a + b
   >>> print (a * b == F8(1), (a+F8(1)) * b == F8(1) + b)
@@ -94,18 +94,18 @@ class PrimeField(object):
             self.value = v % self.base
     @classmethod
     def bit_capacity(self):
-        return self.base.bit_length()
-    @classmethod
-    def overZ2(self):
-        return self.base == 2
+        return (self.base-1).bit_length()
+    #@classmethod
+    #def overZ2(self):
+    #    return self.base == 2
     @classmethod
     def iter(self):
         'all elements of the field'
-        return xrange(self.base)
+        return range(self.base)
     def __repr__(self):
-        return '{}({})'.format(type(self).__name__, self.value)
+        return f'{type(self).__name__}({self.value})'
     def __str__(self):
-        return str(self.value)
+        return hex(self.value)
     def __add__(self, other):
         F = type(self)
         if type(other) == F:
@@ -122,11 +122,7 @@ class PrimeField(object):
             raise TypeError("Unsupported type addition")
     def __neg__(self):
         F = type(self) 
-        if self.overZ2():
-            return F(self.value)
-        else:
-            return F(self.base - self.value)
-        return type(self)(self)
+        return F(self.base - self.value)
     def __sub__(self, other):
         return self + (-other)
     def __isub__(self, other):
@@ -139,7 +135,7 @@ class PrimeField(object):
         else:
             return NotImplemented
     def inv(self):
-        if not self.value:
+        if self.value == 0:
             raise ZeroDivisionError("Inverting 0?!")
         return type(self)(inverse(self.value, self.base))
     def __truediv__ (self, other):
@@ -148,35 +144,33 @@ class PrimeField(object):
         
 class Z2(PrimeField):
     base = 2
-    def __init__(self, v):
-        if type(v) == type(self): 
-            self.value = v.value
-        else:
-            self.value = v & 1
-    @classmethod
-    def bit_capacity(self):
-        return 1
     def __add__(self, other):
         if type(other) == Z2:
             return Z2(self.value ^ other.value)
         else:
-            raise TypeError("Unsupported type addition")
+            return PrimeField.__add__(self, other)
     def __iadd__(self, other):
         if type(other) == Z2:
             self.value ^= other.value
             return self
         else:
-            raise TypeError("Unsupported type addition")
+            return PrimeField.__iadd__(self, other)
     def __mul__(self, other):
         if type(other) == Z2:
             return Z2(self.value & other.value)
-        else: return NotImplemented 
+        else:
+            return PrimeField.__mul__(self, other)
     def inv(self):
-        if not self.value:
-            raise ZeroDivisionError("Inverting 0?!")
-        return Z2(self.value)
+        if self.value:
+            return Z2(self.value)
+        else: 
+            return PrimeField.inv(self)
+    def __neg__(self):
+        return Z2(self)
     __sub__ = __add__
     __isub__ = __iadd__
+    def __repr__(self):
+        return f'{self.value}'
     
 
 class VectorSpace(object):
@@ -257,10 +251,10 @@ class VectorSpace(object):
                 i += 1
             else: return
     def __repr__(self):
-        return '{}({:#x})'.format(type(self).__name__, self.value)
+        return f'{type(self).__name__}({self.value:b})'
     def __str__(self, mode = 'HW'):
         if mode == 'HW':
-            return '{:b}'.format(self.value).zfill(self.bit_capacity())
+            return f'{self.value:b}'.zfill(self.bit_capacity())
         return ' '.join(str(i) for i in self)
     def __mul__(self, other):
         "scalar product"
@@ -352,7 +346,7 @@ class ExtentionField(VectorSpace):
             if not power:
                 return res
             a  = a * a
-
+        return res
 
 class F8(ExtentionField):
     "Rijndael's Polynom 0 = X^8 + X^4 + X^3 + X + 1"

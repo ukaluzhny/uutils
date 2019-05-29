@@ -1,6 +1,6 @@
 ﻿"""Basic operations with numbers
  Primes:
-  primes: a pool of primes from 2 to 997
+  get_primes: a pool of primes from 2 to 997
    Those are retrieved from a file:
    >>> p = get_primes()
    >>> p[-5:]
@@ -22,7 +22,7 @@
   >>> gcd(127*45, 127*101)
   127
 
- inverse(u, v, full = False): modular inverse.
+ inverse(u, v, full=False): modular inverse.
  In full mode, returns coefficients for Bézout's identity
   >>> u = 127; v = 101
   >>> inverse(u, v) == 35
@@ -32,8 +32,8 @@
   1
 
  inv32: inverse mod 2**32; the argument shall be odd
-  >>> inv32(0x12345)
-  3329816461
+  >>> hex(inv32(0x12345))[:10]
+  '0xc678f78d'
   
  n2w: a Python integer -> C style WINT
   >>> n2w(0x4000000030000000200000001)
@@ -43,7 +43,7 @@
   >>> l = n2a(0x12345678abcd1234)
   >>> l == [0xabcd1234, 0x12345678] #LE array
   True
-  >>> x = un.ri() #a random integer, by default 96 bit long
+  >>> x = grb(86)
   >>> l = n2a(x)
   >>> a2n(l) == x
   True
@@ -51,8 +51,10 @@
   """
 from os.path import exists, dirname, join
 from struct import pack, unpack
+from random import getrandbits as grb
+from numba import jit
 
-def sieve(N = 1000):
+def sieve(N=1000):
     buf = list(range(N))
     buf[1] = 0
     for i in range(2, N):
@@ -67,49 +69,48 @@ def store_primes():
         for n in primes:
             f.write(pack('i', n))
 
+primes = []
 def get_primes():
     global primes
-    try:
+    if primes:
         return primes
-    except NameError:
         try:
             primes = []
             with open(join(dirname(__file__), 'primes.dat'), 'rb') as f:
                 while True:
                     n = f.read(4)
-                    if not n: break
+                    if not n:
+                        break
                     primes.append(unpack('i', n)[0])
-        except IOError as e:
-            # print (e)
-            print ("Cannot find primes.dat, generating primes")
+        except IOError:
+            print("Cannot find primes.dat, generating primes")
             primes = sieve()
             try:
                 store_primes()
             except IOError:
-                print ("Cannot store primes.dat")
+                print("Cannot store primes.dat")
         return primes
 
 def primes_product(n, m):
-    global primes
-    try: primes
-    except NameError: get_primes() 
+    if not primes:
+        get_primes()
     res = 1
     for p in primes[n:m]:
         res *= p
     return res
 
 def primes_prob(n, m):
-    global primes
-    try: primes
-    except NameError: get_primes() 
+    if not primes:
+        get_primes()
     res = 1
     for p in primes[n:m]:
         res *= (1-1./p)
     return res
-
-def fermat_test (p, a = 2):
+    
+def fermat_test(p, a=2):
     return pow(a, p-1, p) == 1
 
+@jit()
 def gcd(x, y):
     x = abs(x)
     y = abs(y)
@@ -131,9 +132,10 @@ def inverse(u, v, full = False):
     a %= v_stored
     if full: return a, -(a*u_stored-1)//v_stored
     return a
-
+    
+@jit("u4(u4)")
 def inv32(b):
-    "inverse of b mod 2**32"
+    "inverse of b mod 2**32" 
     assert(b & 1), "inverting an odd number"
     x = (((b + 2) & 4) << 1) + b
     x *= 2 - b * x
@@ -149,33 +151,37 @@ def prime30():
         d = gcd(candidate, first_primes)
         if d != 1:
             candidate += (first_primes // d) << 1
-        if candidate >> 30: continue
+        if candidate >> 30:
+            continue
         if fermat_test(candidate) and fermat_test(candidate, 3):
             found = True
     return candidate
 
-def n2w(x, name = "", printing = True):
+def n2w(x, name="", printing=True):
     "Python integer ->  C style WINT"
     l = n2a(x)
     res = ', '.join(
         '0x{:08x}'.format(i) for i in l)
     res = name + ' {'+res+'}'
-    if printing: print(res)
-    else: return res
+    if printing:
+        print(res)
+    return res
     
 def n2f(f, *p):
     while p:
         (x, l), p = p[:2], p[2:]
         f.write(pack('{}I'.format(l), *n2a(x, l)))
         
-def n2a(n, l = None):
+def n2a(n, l=None):
     "LE array of words"
     res = []
-    if not l: l = (n.bit_length() + 31) //32
-    for j in range(l):
+    if not l:
+        l = (n.bit_length() + 31) //32
+    for _ in range(l):
         i, n = n & 0xffffffff, n >> 32
         res.append(i)
     return res
+
 def a2n(l):
     res = 0
     for i in reversed(l): 
@@ -200,5 +206,5 @@ if __name__ == "__main__":
             import doctest
             doctest.testmod()
         elif sys.argv[1] == '-h':
-            print ("Use -v  to run self-test")
+            print("Use -v  to run self-test")
 

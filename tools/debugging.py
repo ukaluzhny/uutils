@@ -1,11 +1,11 @@
-"""Debugging utulities, especially for working with large integers
+"""Debugging utilities, especially for working with large integers
 
 """
 from logbook import StreamHandler, NullHandler, INFO, DEBUG
 import sys
 from random import seed as srand, getrandbits as grb
 from struct import pack, unpack
-from .dmath.ubits import n2words_le
+from uutils.dmath.ubits import n2words_le
 
   
 class ConciseLog(object):
@@ -50,7 +50,7 @@ def tester(N, func, indx = None, seed = None, fname = "", **keywargs):
                 with NullLog():
                     func(**keywargs)
             else:
-                with ConciseLog(f):
+                with ConciseLog(f, level = 'debug'):
                     func(**keywargs)
     except Exception as e:
         print('\n', repr(e))

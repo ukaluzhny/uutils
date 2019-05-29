@@ -1,6 +1,9 @@
 from Npp import *
 from bs4 import BeautifulSoup as soup
 from os.path import join
+from os import getcwd
+print(getcwd())
+
 import english, download, gui
 import json
 from codecs import open

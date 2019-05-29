@@ -22,3 +22,12 @@ def ws(d):
             f = frmt.format(word)
             copyfile(join(source, f), join(dest, f))
             l.append(s.format(f))
+
+            
+def anki_notes():
+    from anki import ws
+    for i in d:
+        i += h[:2]
+        h = h[2:]
+    ws(d)    
+            

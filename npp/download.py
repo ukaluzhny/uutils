@@ -36,8 +36,8 @@ def download_to_txt_file():
     download_to_file("txt")
 
 def get_mp3(text, fname=None):
-    url  = ("http://translate.google.com/translate_tts?ie=UTF-8&q=" + 
-        "{}&tl=en&client=" + hex(grb(16))[2:])
+    url  = ("[InternetShortcut]\nURL=http://translate.google.com/translate_tts?ie=UTF-8&q=" + 
+        "{}&tl=en&client=me" + hex(grb(16))[2:])
     response  = rg.get(url.format("+".join(text.split())))
     if response.status_code == 503: 
         print("503")
@@ -46,6 +46,7 @@ def get_mp3(text, fname=None):
         fname = "_".join(text.split())
     open("{}.mp3".format(fname),"wb").write(response.content)
     return True
+        
         
 # requests
 # Passing Parameters In URLs

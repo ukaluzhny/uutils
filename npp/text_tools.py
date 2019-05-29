@@ -18,7 +18,7 @@ def split2lists(text, separator=None):
         _separator = _sep
     return res
 
-def join2text(item, separator=None):
+def join2text(item, separator=None, a_type=None):
     "returns the text "
     if separator:
         global _separator
@@ -26,6 +26,8 @@ def join2text(item, separator=None):
         _separator = separator
     if item == str(item): #str, unicode
         res = item + _separator
+    elif type(item) == a_type:
+        res = str(item) + _separator
     else:
         if type(item) == dict:
             item = item.items()
