@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """operations with bits
  hw(x): hamming weight of 32 LS bits of x  
   x may be an object with 'value' or an iterable.
@@ -15,17 +14,63 @@
   >>> lsw(0x123456789a) == 0x3456789a
   True
   
- msbits(x, x_bitlen=None, l=32): l most significant bits of x
+ msbits(x, l=32, x_bitlen=None): l most significant bits of x
   >>> msbits(0xf23456789a) == 0xf2345678
   True
-  >>> msbits(0x123456789a, 64) == 0x12
+  >>> msbits(0x123456789a, 32, 64) == 0x12
   True
-  >>> msbits(0x123456789a, 37, 9) == 0x123
+  >>> msbits(0x123456789a, 9, 37) == 0x123
   True
 
  lb(x): the least significant bit set in x
   >>> lb(0x1230) == 0x10
   True
+
+ bits: a class for operations with bits
+  bits(x, bitlength): bitstring object. 
+  may be initilized by  
+  - int,   
+  - bytes, considered as a byte array in BE order
+  - str, a hexidecimal representation
+  - list of values to concatenate (in LE order)
+   >>> bits(b'\x23\x45\x67')
+   bits(0x234567, 24)
+   >>> bits('12345')
+   bits(0x12345, 20)
+   >>> bits(['1234', '5678'], 16)
+   bits(0x12345678, 32)
+   >>> bits(['5678', '1234'], [16, 32])
+   bits(0x567800001234, 48)
+  
+  bits.as_bytes(): returns the value as a bytes
+   >>> bits('23456789abcdef').as_bytes()
+   b'#Eg\x89\xab\xcd\xef'
+
+  bits.stream(chunk_length):  streams the value as a sequence of chunks
+    each chunk is a bits object
+   >>> list(bits('0abcdef').stream(12))
+   [bits(0x0, 12), bits(0xabc, 12), bits(0xdef, 12)]
+
+   >>> str(bits('abcdef'))
+   'abcdef'
+   >>> repr(bits('bcdef'))
+   'bits(0xbcdef, 20)'
+    
+  concatination (in LE order) is done by +
+   >>> str(bits('1234') + bits('5678'))
+   '12345678'
+   
+  bitwise xor is supported:
+   >>> bits('1234') ^ bits('5678')
+   bits(0x444c, 16)
+
+  bits.rotate(nbits=8): rotates a word nbits to the left
+   >>> hex(bits('1d2c3a4f').rotate(8))
+   '0x2c3a4f1d'
+
+  bits.swap_bytes(): returns swapped bits object
+   >>> bits('1d2c3a4f').swap_bytes()
+   bits(0x4f3a2c1d, 32)
 
  Iterators:
   for a 32-bit integer, iterate:
@@ -78,125 +123,179 @@
 
 TBD: tests for Plain, Flip, Deal, Shuffler
 
-  operations with bits
-  bits(x, bitlength): bitstring object. may be initilized by  
-  - int,   
-  - bytes, expecting x to be of hexidecimal form 
-  - str, expecting x to contain ascii symbols only
-  - list of values to concatinate (in LE order)
-   >>> bits(b'012345')
-   bits(0x12345, 24)
-   >>> bits('012345')
-   bits(0x353433323130, 48)
-   >>> bits([b'1234', b'5678'], 16)
-   bits(0x56781234, 32)
-   >>> bits([b'1234', b'5678'], [32, 16])
-   bits(0x567800001234, 48)
-  
-  bits.stream(chunk_length) slices it into a LE sequence of chuncks
-    each chunk is a bits objectr
-   >>> temp = bits(b'0123456789abcdef')
-   >>> [hex(chunk.val) for chunk in temp.stream(12)]
-   ['0xdef', '0xabc', '0x789', '0x456', '0x123', '0x0']
-
-  the value of a bits object can be returned in different forms 
-   >>> temp.bytes()
-   b'0123456789abcdef'
-   >>> temp.base64()
-   'ASNFZ4mrze8='
-    
-  concatination (in LE order) is done by +
-   >>> str(bits(b'1234') + bits(b'5678'))
-   '56781234'
-   
-  for bitwise operations, xor is supported:
-   >>> bits(b'1234') ^ bits(b'5678')
-   bits(0x444c, 16)
 
 """
+from binascii import hexlify
 from numba import jit
-import binascii
 
 
 @jit("u4(u4)")
 def hw32(x):
-    'hamming weight'
-    m2  = 0x33333333
-    m4  = 0x0f0f0f0f
-    h01 = 0x01010101
-    x -= (x >> 1) & 0x55555555 #put count of each 2 bits
-    x =  (x & m2) + ((x >> 2) & m2) #put count of each 4 bits
-    x =  (x + (x >> 4)) & m4        #put count of each 8 bits
-    return ((x * h01) >> 24) & 0x3f
+    "hamming weight"
+    m2 = 0x33333333
+    m4 = 0x0F0F0F0F
+    h1 = 0x01010101
+    x -= (x >> 1) & 0x55555555  # put count of each 2 bits
+    x = (x & m2) + ((x >> 2) & m2)  # put count of each 4 bits
+    x = (x + (x >> 4)) & m4  # put count of each 8 bits
+    return ((x * h1) >> 24) & 0x3F
+
 
 @jit("u8(u8)")
 def hw64(x):
-    'hamming weight'
-    m2  = 0x3333333333333333
-    m4  = 0x0f0f0f0f0f0f0f0f
-    h01 = 0x0101010101010101
-    x -= (x >> 1) & 0x5555555555555555 # count of each 2 bits
-    x =  (x & m2) + ((x >> 2) & m2) #put count of each 4 bits
-    x =  (x + (x >> 4)) & m4        #put count of each 8 bits
-    return (x * h01) >> 56
+    "hamming weight"
+    m2 = 0x3333333333333333
+    m4 = 0x0F0F0F0F0F0F0F0F
+    h1 = 0x0101010101010101
+    x -= (x >> 1) & 0x5555555555555555  # count of each 2 bits
+    x = (x & m2) + ((x >> 2) & m2)  # put count of each 4 bits
+    x = (x + (x >> 4)) & m4  # put count of each 8 bits
+    return (x * h1) >> 56
+
 
 def hw(x):
-    if not x: return 0
-    if hasattr(x, 'value'):
+    if not x:
+        return 0
+    if hasattr(x, "value"):
         x = x.value
-    if hasattr(x, '__iter__'):
+    if hasattr(x, "__iter__"):
         return sum([hw32(i) for i in x])
     return hw32(x)
-    
-def lsw(x, n = 0):
-    "ls word"
-    return (x >> (32*n)) & 0xffffffff
-    
-def msbits(x, x_bitlen=None, l=32):
-    "ms bits"
+
+
+def lsw(x, n=0):
+    "ls word of an integer"
+    return (x >> (32 * n)) & 0xFFFFFFFF
+
+
+def msbits(x, l=32, x_bitlen=None):
+    "l most significant bits of x"
     if not x_bitlen:
         x_bitlen = x.bit_length()
         if x_bitlen <= l:
             return x
     return x >> (x_bitlen - l)
 
-#iterators
+
+def lb(x):
+    "The least significant bit set in x"
+    return x & (-x)
+
+
+class bits(object):
+    """internally, represented by a Python integer
+    """
+
+    def __init__(self, val: {int, bytes, str, list} = 0, bitlength: {int, list} = 0):
+        if type(val) is type(self):
+            bitlength = max(bitlength, val.bitlength)
+            self.val, self.bitlength = val.val, bitlength
+        elif type(val) is int:
+            self.bitlength = max(bitlength, val.bit_length())
+            self.val = val
+        elif type(val) is bytes:
+            self.bitlength = max(bitlength, len(val) * 8)
+            self.val = int.from_bytes(val, "big")
+        elif type(val) is str:  # expects hex in ascii
+            bitlength = max(bitlength, len(val) * 4)
+            val = int(val, 16)
+            self.__init__(val, bitlength)
+        elif type(val) is list:
+            if type(bitlength) is not list:
+                bitlength = [bitlength] * len(val)
+            res = sum((bits(v, l) for v, l in zip(val, bitlength)), bits(0))
+            self.val, self.bitlength = res.val, res.bitlength
+        else:
+            raise NotImplementedError
+        self.val &= (1 << self.bitlength) - 1
+
+    def as_bytes(self):
+        return self.val.to_bytes((self.bitlength + 7) // 8, byteorder="big")
+
+    def stream(self, chunk_length):
+        "split the value into a sequence of chunks"
+        l, res, val = 0, [], self.val
+        mask = (1 << chunk_length) - 1
+        while l < self.bitlength:
+            res.append(bits(val & mask, chunk_length))
+            val >>= chunk_length
+            l += chunk_length
+        res.reverse()
+        return res
+
+    def __getitem__(self, index):
+        return bits(self.as_bytes()[index])
+
+    def __repr__(self):
+        return f"bits(0x{self.val:x}, {self.bitlength})"
+
+    def __str__(self):
+        return hexlify(self.as_bytes()).decode()
+
+    def __lshift__(self, nbits):
+        return bits(self.val << nbits, self.bitlength + nbits)
+
+    def __xor__(self, other):
+        assert self.bitlength >= other.bitlength
+        return bits(self.val ^ other.val, self.bitlength)
+
+    def __add__(self, other):
+        "note that '0x1234' + '0x5678' == '0x12345678'"
+        return (self << other.bitlength) ^ other
+
+    def rotate(self, n=8):
+        """Rotate a word n bits to the left: eg, rotate(1d2c3a4f) == 2c3a4fd"""
+        mask = (1 << self.bitlength) - 1
+        return (self.val << n) & mask | (self.val >> (self.bitlength - n))
+
+    def swap_bytes(self):
+        assert self.bitlength % 8 == 0
+        val = self.val.to_bytes(self.bitlength // 8, byteorder="little")
+        return bits(int.from_bytes(val, byteorder="big"), self.bitlength)
+
+
+# iterators
 def bytes_be(x):
     "iterate in BE order"
     for _ in range(4):
         yield x >> 24
         x <<= 8
-        x &= 0xffffffff
+        x &= 0xFFFFFFFF
+
 
 def nibbles_be(x):
     "iterate in BE order"
     for _ in range(8):
         yield x >> 28
         x <<= 4
-        x &= 0xffffffff
+        x &= 0xFFFFFFFF
+
 
 def n2words_le(n, lwords=None):
     "LE array of words"
-    if not lwords: 
-        lwords = (n.bit_length() + 31) //32
+    if not lwords:
+        lwords = (n.bit_length() + 31) // 32
     for _ in range(lwords):
-        x, n = n & 0xffffffff, n >> 32
+        x, n = n & 0xFFFFFFFF, n >> 32
         yield x
+
 
 def bytes_le(x):
     "iterate in LE order"
     for _ in range(4):
-        yield x & 0xff
+        yield x & 0xFF
         x >>= 8
+
 
 def nibbles_le(x):
     "iterate in LE order"
     for _ in range(8):
-        yield x & 0xf
+        yield x & 0xF
         x >>= 4
 
+
 def bytes2words(list_of_bytes):
-    'both in LE order'
+    "both in LE order"
     b, i, w = 0, 0, 0
     for b in list_of_bytes:
         w |= b << i
@@ -204,26 +303,24 @@ def bytes2words(list_of_bytes):
         if i == 32:
             yield w
             i, w = 0, 0
-    if i: 
+    if i:
         yield w
 
-def lb(x):
-    "The least significant bit set in x"
-    return x & (-x)
-        
+
 def masks(m, n):
     "masks with m out of n bits set"
     if m > n:
         raise ValueError("Inconsistent parameters for mask_generator")
-    mask = (1<<m) - 1
+    mask = (1 << m) - 1
     n = 1 << n
     while mask < n:
         yield mask
         smallest = lb(mask)
-        ripple  = mask + smallest
+        ripple = mask + smallest
         ones = mask ^ ripple
-        ones = (ones >> 2) // smallest 
+        ones = (ones >> 2) // smallest
         mask = ripple | ones
+
 
 def products(subdim, dim):
     """iterates through all subdim subspaces 
@@ -233,12 +330,12 @@ def products(subdim, dim):
         v, vbit = 0, lb(mask)
         while True:
             yield (mask, v)
-            if v & vbit: 
-            #the current bit in v is already lit
-                #bits to vary in v, MS than vbit
+            if v & vbit:
+                # the current bit in v is already lit
+                # bits to vary in v, MS than vbit
                 m = (v ^ mask) & (-vbit << 1)
                 vbit = lb(m)
-                if vbit: 
+                if vbit:
                     v ^= vbit
                     v &= -vbit
                     vbit = lb(mask)
@@ -247,136 +344,80 @@ def products(subdim, dim):
             else:
                 v ^= vbit
 
+
 class Permutation(object):
-    'Invertible permutation'
+    "Invertible permutation"
+
     def __init__(self, p):
         self.p = list(p)
         assert len(set(self.p)) == len(self.p), "true permutation"
+
     def __getitem__(self, value):
         try:
             return self.p[value]
         except IndexError:
             return None
+
     def __repr__(self):
-        l = (len(self.p).bit_length()+3)//4
-        f = '{{:{:d}d}}'.format(l)
-        return ','.join(f.format(i) for i in self.p)
+        l = (len(self.p).bit_length() + 3) // 4
+        f = "{{:{:d}d}}".format(l)
+        return ",".join(f.format(i) for i in self.p)
+
     def __iter__(self):
         return iter(self.p)
+
     def __invert__(self):
-        res = [None]* len(self.p)
+        res = [None] * len(self.p)
         for i, v in enumerate(self.p):
             res[v] = i
         return Permutation(res)
+
     def __call__(self, l):
         return (l[i] for i in self.p)
+
     def __mul__(self, other):
         return Permutation(self(other.p))
+
     def __add__(self, other):
         l = len(self.p)
         res = Permutation(self.p)
         for i in other:
-            res.p.append(l+i)
+            res.p.append(l + i)
         return res
+
     def shuffle(self, l):
         for i, x in enumerate(self(l)):
             l[i] = x
-               
+
+
 def Plain(n):
-    'Permutation(0, 1, ..., n-1)'
+    "Permutation(0, 1, ..., n-1)"
     return Permutation(range(n))
 
+
 def Flip(n):
-    'Permutation(n-1, n-2, ..., 0)'
-    return Permutation(range(n-1, -1, -1))
+    "Permutation(n-1, n-2, ..., 0)"
+    return Permutation(range(n - 1, -1, -1))
+
 
 def Deal(n, step):
-    'Permutation(0, 2, ..., 1, 3, ...)'
+    "Permutation(0, 2, ..., 1, 3, ...)"
     p = []
     for i in range(step):
         p += range(i, n, step)
     return Permutation(p)
-    
+
+
 class Shuffler(object):
     def __init__(self, *l):
         self.l = list(l)
+
     def shuffle(self, l):
         p = self.l.pop(0)
         p.shuffle(l)
-    
 
-class bits(object):
-    def __init__(self, val: {int, bytes, str, list}=0, 
-                 bitlength: {int, list}=0):
-        if type(val) is int:
-            self.bitlength = max(bitlength, val.bit_length())
-            self.val = val
-        elif type(val) is type(self):
-            bitlength = max(bitlength, val.bitlength)
-            self.val, self.bitlength = val.val, bitlength
-        elif type(val) is bytes: #expects hexidecimal form
-            self.bitlength = max(bitlength, len(val) * 4)
-            self.val = int(val, 16)
-        elif type(val) is str: #expects ascii
-            _ = bits([ord(s) for s in val], 8)
-            self.val, self.bitlength = _.val, _.bitlength
-        elif type(val) is list:
-            if bitlength == 0:
-                bitlength = [_.bitlength for _ in val]
-            elif type(bitlength) is int:
-                bitlength = [bitlength] * len(val)
-            _ = bits(0)
-            for i, l in zip(val, bitlength):
-                _ += bits(i, l) 
-            self.val, self.bitlength = _.val, _.bitlength
-        else:
-            raise NotImplementedError
-    def trim(self, bitlength):
-        self.bitlength = bitlength
-        self.val = self.val & ((1 << bitlength) - 1)
-    def stream(self, chunk_length):
-        "split the value into a sequence of chunks"
-        l = 0
-        mask = (1 << chunk_length) - 1
-        val = self.val
-        while l < self.bitlength:
-            yield bits(val & mask, chunk_length)
-            val >>= chunk_length
-            l += chunk_length
-    def split(self, chunk_length, LE=True):
-        if not LE:
-            res = list(self.stream(8))
-            res.reverse()
-            res = bits(res)
-        else:
-            res = self
-        res = list(res.stream(chunk_length))
-        if not LE: res.reverse()
-        return res
-    def __repr__(self):
-        return f'bits(0x{self.val:x}, {self.bitlength})'
-    def __str__(self):
-        val = self.val & (((1 << self.bitlength)) - 1)
-        l = (self.bitlength + 3) // 4
-        fmt = f'{{:0{l}x}}'
-        return fmt.format(val)
-    def bytes(self):
-        return str(self).encode()
-    def base64(self):
-        s = binascii.unhexlify(self.bytes())
-        return binascii.b2a_base64(s, newline=False).decode(encoding='ascii')
-    def __add__(self, other):
-        "note that '0x1234' + '0x5678' == '0x56781234'"
-        return bits(self.val | (other.val << self.bitlength),
-                         self.bitlength + other.bitlength)
-    def __xor__(self, other):
-        assert self.bitlength == other.bitlength
-        return bits(self.val ^ other.val, self.bitlength)
-    def rotate(self, n = 8):
-        """Rotate a word n bits to the left: eg, rotate(1d2c3a4f) == 2c3a4fd"""
-        mask = (1 << self.bitlength) - 1
-        self.val = (self.val << n) & mask |  (self.val >> (self.bitlength - n)) 
-#TBD     
+
+# TBD
 """           
 class PartialFunction(object):
     def __init__(self, p):
@@ -454,12 +495,14 @@ class PartialFunction(object):
                     break
         return res
 """
-               
+
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) > 1: 
-        if   sys.argv[1] == '-v':
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "-v":
             import doctest
+
             doctest.testmod()
-        elif sys.argv[1] == '-h': 
+        elif sys.argv[1] == "-h":
             print("Use -v  to run self-test")

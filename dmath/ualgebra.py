@@ -171,7 +171,9 @@ class Z2(PrimeField):
     __isub__ = __iadd__
     def __repr__(self):
         return f'{self.value}'
-    
+    @classmethod
+    def overZ2(self):
+        return True    
 
 class VectorSpace(object):
     """An abstract class for vector spaces over various fields.
